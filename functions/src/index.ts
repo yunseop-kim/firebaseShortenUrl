@@ -6,7 +6,6 @@ const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 
 const co = require('co');
-const _ = require('underscore');
 
 const express = require('express');
 const cookieParser = require('cookie-parser')();
