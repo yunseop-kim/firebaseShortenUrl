@@ -60,18 +60,14 @@ function createShortenerRequest(sourceUrl) {
 
 function createShortenerPromise(snapshot) {
   const key = snapshot.key;
-  const originalUrl = snapshot.val();
-  return request(createShortenerRequest(originalUrl)).then((response) => {
-    if (response.statusCode === 200) {
-      return response.body.id;
+  const original = snapshot.val();
+  return co(function *() {
+    const response = yield request(createShortenerRequest(original));
+    if (response.statusCode !== 200) {
+      throw response.body;
     }
-    throw response.body;
-  }).then((shortUrl) => {
-    return admin.database().ref(`/links/${key}`).set({
-      original: originalUrl,
-      short: shortUrl,
-    });
-  });
+    return admin.database().ref(`/links/${key}`).set({original, short: response.body.id});
+  })
 }
 
 exports.addLink = functions.https.onRequest((req, res) => {

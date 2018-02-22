@@ -1,2 +1,5 @@
 functions/node_modules
 functions/lib
+
+# for IntelliJ
+.idea
