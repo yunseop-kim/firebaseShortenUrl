@@ -5,8 +5,6 @@ const admin = require('firebase-admin');
 
 admin.initializeApp(functions.config().firebase);
 
-const co = require('co');
-
 const express = require('express');
 const cookieParser = require('cookie-parser')();
 const request = require('request-promise');
@@ -23,14 +21,12 @@ app.set('view engine', 'html');
 app.use(cors);
 app.use(cookieParser);
 
-app.get('/shorten/:key', (req, res) => {
+app.get('/shorten/:key', async (req, res) => {
   console.log("snapshot: ", functions.config().firebase.apiKey);
-  co(function *() {
-    const snapshot = yield admin.database().ref('/links/' + req.params.key).once('value');
-    const url = snapshot.val();
-    console.log("url:", url);
-    res.status(200).render('index.html', url);
-  })
+  const snapshot = await admin.database().ref('/links/' + req.params.key).once('value');
+  const url = snapshot.val();
+  console.log("url:", url);
+  res.status(200).render('index.html', url);
 });
 
 // Shorten URL
@@ -58,27 +54,23 @@ function createShortenerRequest(sourceUrl) {
   };
 }
 
-function createShortenerPromise(snapshot) {
+async function createShortenerPromise(snapshot) {
   const key = snapshot.key;
   const original = snapshot.val();
-  return co(function *() {
-    const response = yield request(createShortenerRequest(original));
-    if (response.statusCode !== 200) {
-      throw response.body;
-    }
-    return admin.database().ref(`/links/${key}`).set({original, short: response.body.id});
-  })
+  const response = await request(createShortenerRequest(original));
+  if (response.statusCode !== 200) {
+    throw response.body;
+  }
+  return admin.database().ref(`/links/${key}`).set({original, short: response.body.id});
 }
 
-exports.addLink = functions.https.onRequest((req, res) => {
-  co(function *() {
-    // Grab the text parameter.
-    const url = req.body.url;
-    // Push the new message into the Realtime Database using the Firebase Admin SDK.
-    const result = yield admin.database().ref('/links').push(url);
-    console.log("result:", result);
-    res.status(201).json({key: result.key});
-  });
+exports.addLink = functions.https.onRequest(async (req, res) => {
+  // Grab the text parameter.
+  const url = req.body.url;
+  // Push the new message into the Realtime Database using the Firebase Admin SDK.
+  const result = await admin.database().ref('/links').push(url);
+  console.log("result:", result);
+  res.status(201).json({key: result.key});
 });
 
 exports.app = functions.https.onRequest(app);
